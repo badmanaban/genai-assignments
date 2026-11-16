@@ -1,0 +1,240 @@
+{
+  "name": "My Sub-Workflow 1 Week 2(Day 1)-Month2",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        272,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        496,
+        352
+      ],
+      "id": "117c32b2-3830-4e1b-b536-03cd07ff3d07",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3.raw"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        368
+      ],
+      "id": "71509c48-8370-4317-9417-6499e926ebaa",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\n### **P - PERSONA**\nYou are a Principal Test Automation Architect who is an expert in both legacy Java Selenium (TestNG, POM, DataProvider) and modern Playwright TypeScript automation frameworks. You specialize in migrating legacy enterprise test suites to modern, fixture-driven Playwright structures without losing test intent, coverage, or metadata.\n\n---\n\n### **I - INSTRUCTION**\nYour task is to convert a legacy Java Selenium TestNG test case into a Playwright TypeScript spec file that fully adheres to our target project's framework conventions.\n\nKey Rules to follow during conversion:\n1. **Fixture Injection:** Replace explicit Page Object instantiations (`new LoginPage()`) with custom fixtures destructured inside the test function signature (e.g., `{ SalesforceLogin, SalesforceHome, SalesforceLead }`).\n2. **Metadata Annotations:** Map TestNG metadata (`@BeforeTest`, `testcaseName`, `testDescription`) into Playwright's `test.info().annotations.push({ type: 'TestCase', description: '...' })`.\n3. **Async Execution:** Ensure all framework page object method calls are properly awaited using `await`.\n4. **No Direct Page/Browser Calls:** Do not use `page.locator()` directly in the spec file. Interact strictly through custom page object fixture methods.\n\n---\n\n### **C - CONTEXT**\nWe are migrating our legacy Java Selenium + TestNG + Page Object Model test suite into a custom Playwright TypeScript automation framework (`SonicFramework`). \n\nIn our new Playwright architecture:\n- Page Objects are injected via custom test fixtures (`../customFixtures/salesForceFixture`).\n- Test metadata is added via `test.info().annotations`.\n- Data dynamic generation relies on helper utilities like `FakerData` (`../helpers/fakerUtils`).\n\n---\n\n### **E - EXAMPLE**\n\n#### **Input (Legacy Java Selenium TestNG Test Case):**\n```java\npackage com.salesforce.testcases;\n\nimport org.testng.annotations.BeforeTest;\nimport org.testng.annotations.Test;\nimport com.framework.testng.api.base.ProjectSpecificMethods;\nimport com.salesforce.pages.LoginPage;\n\npublic class TC_01 extends ProjectSpecificMethods {\n    @BeforeTest\n    public void setValues() {\n        excelFileName=\"Login\";\n        testcaseName=\"Login for salesforce application\";\n        testDescription=\"Login with positive credentials\";\n        authors=\"saran\";\n        category=\"smoke\";\n    }\n    \n    @Test(dataProvider=\"fetchData\")\n    public void runLogin(String uName, String pwd) {\n        LoginPage lp = new LoginPage();\n        lp.enterUname(uName)\n          .enterPwd(pwd)\n          .clickLogin();\n    }\n}\n\n```\n\n#### **Output (Target Playwright TypeScript Test Case):**\n\n```typescript\nimport { test } from \"../customFixtures/salesForceFixture\";\nimport { FakerData } from \"../helpers/fakerUtils\";\n\nlet firstName = FakerData.getFirstName();\n\ntest.use({ storageState: \"logins/salesforceLogin.json\" });\n\ntest(`Creating Lead`, async ({ SalesforceLogin, SalesforceHome, SalesforceLead }) => {\n    test.info().annotations.push(\n        { type: 'TestCase', description: 'Creating Lead' },\n    );\n\n    await SalesforceLogin.salesforceLogin(\"ADMINLOGIN\");\n    await SalesforceHome.appLauncher();\n    await SalesforceHome.viewAll();\n    await SalesforceHome.searchApp(\"Leads\");\n    await SalesforceHome.selectApp(\"Leads\");\n    await SalesforceLead.newButton();\n    await SalesforceLead.salutation(\"Mr.\");\n    await SalesforceLead.firstName(firstName);\n    await SalesforceLead.lastName(FakerData.getLastName());\n    await SalesforceLead.Company(FakerData.randomCityName());\n    await SalesforceLead.saveButton();\n    await SalesforceLead.verifiTheLeadAccount(firstName);\n});\n\n```\n\n---\n\n### **O - OUTPUT FORMAT**\n\nProvide the converted code inside a single, clean TypeScript code block. Followed by a brief list of key transformations made (e.g., mapped annotations, substituted fixtures, updated data handlers).\n\n---\n\n### **T - TONE**\n\nTechnical, concise, precise, and standard-compliant.\n\n---\n[INPUT DATA]\n- File Path: {{ $('Loop Over Items').item.json.path }}\n- Source Code:\n{{ $json.data }}",
+        "needsFallback": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        944,
+        240
+      ],
+      "id": "cc7631e8-be75-4e8d-9230-8704b417a68b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        880,
+        384
+      ],
+      "id": "c3ad1099-f495-478d-b3c3-085387e5ea8b",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "v6Sz3b5nm4i1Vv01",
+          "name": "testcase_generate"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-safeguard-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        992,
+        384
+      ],
+      "id": "84a335c3-c740-4e3f-aada-1d669572742a",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "v6Sz3b5nm4i1Vv01",
+          "name": "testcase_generate"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "output",
+        "options": {
+          "fileName": "={{ $('Loop Over Items').item.json.path.split('testcases/')[1].replace('.java','')}}.txt"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        320
+      ],
+      "id": "3e8f8ee1-a399-4777-bd7a-9b62eeaaff7e",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "amount": 35
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1536,
+        320
+      ],
+      "id": "fa1c4652-73ff-4e60-acf3-131a4b776376",
+      "name": "Wait",
+      "webhookId": "c4783053-69a1-4e57-a9d1-8088a96c6a69"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "bb7db89f-0321-4163-9326-f5d08f576de3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c0dc17ce9efcf8fd0877e6ff15010fc2d2717dd4b60722ba4a9f11f93bab1bed"
+  },
+  "nodeGroups": [],
+  "id": "7IpQffHU4J89WKqF",
+  "tags": []
+}
