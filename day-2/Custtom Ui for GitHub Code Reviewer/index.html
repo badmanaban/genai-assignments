@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#5E34F1">
+  <meta name="description" content="AI-powered GitHub repository code review dashboard.">
+  <title>AI Code Reviewer | Gupshup AI</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1A1A35;
+      --muted: #5F6880;
+      --line: #E2E7F3;
+      --canvas: #FCFCFF;
+      --surface: #fff;
+      --brand: #5E34F1;
+      --brand-dark: #4745C0;
+      --brand-soft: #F6F4FF;
+      --brand-accent: #FF3964;
+      --teal: #3F4A73;
+      --teal-soft: #F6F4FF;
+      --amber: #a45b0a;
+      --amber-soft: #fff5e7;
+      --shadow: 0 12px 34px rgba(27, 39, 54, .06);
+      font-family: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, a:focus-visible {
+      outline: 3px solid rgba(94, 52, 241, .32);
+      outline-offset: 3px;
+    }
+    .topbar {
+      height: 74px;
+      padding: 0 max(28px, calc((100vw - 1180px) / 2));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand-lockup { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { display: block; width: 150px; height: auto; flex: none; }
+    .topbar-note { color: var(--muted); font-size: 13px; font-weight: 550; }
+    main { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
+    .intro { padding: 50px 0 27px; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 13px;
+      color: var(--brand-accent); font-size: 12px; font-weight: 750; letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); }
+    h1 {
+      margin: 0; color: var(--brand); font-size: clamp(30px, 4vw, 42px);
+      line-height: 1.12; letter-spacing: -1.6px;
+      background: linear-gradient(90deg, #5E34F1 0%, #D01692 75%, #FF3964 100%);
+      background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .intro p { margin: 12px 0 0; max-width: 640px; color: var(--muted); font-size: 16px; line-height: 1.65; }
+    .input-panel {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end;
+      gap: 16px; padding: 22px; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+    }
+    .field-label { display: block; margin-bottom: 9px; font-size: 13px; font-weight: 700; }
+    .input-wrap { position: relative; }
+    .input-wrap svg {
+      position: absolute; top: 50%; left: 14px; width: 18px; height: 18px;
+      transform: translateY(-50%); color: #788598; pointer-events: none;
+    }
+    input[type="url"] {
+      width: 100%; height: 48px; padding: 0 14px 0 43px;
+      border: 1px solid #d5dce5; border-radius: 8px; background: #fff;
+      color: var(--ink); font-size: 14px; transition: border-color .15s, box-shadow .15s;
+    }
+    input[type="url"]::placeholder { color: #94a0ae; }
+    input[type="url"]:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(94, 52, 241, .11); outline: none; }
+    .input-error { display: none; margin: 8px 0 0; color: #b42342; font-size: 13px; }
+    .input-error.visible { display: block; }
+    .form-actions { display: flex; gap: 9px; }
+    .button {
+      min-height: 46px; padding: 0 17px; display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; border: 1px solid transparent; border-radius: 8px;
+      font-size: 13px; font-weight: 700; white-space: nowrap; transition: background .15s, border-color .15s, transform .15s;
+    }
+    .button:active { transform: translateY(1px); }
+    .button-primary { background: var(--brand); color: #fff; }
+    .button-primary:hover:not(:disabled) { background: var(--brand-accent); }
+    .button-primary:disabled { opacity: .68; cursor: wait; }
+    .button:disabled { opacity: .68; cursor: not-allowed; }
+    .button-secondary { background: #fff; color: #39475a; border-color: #d7dee7; }
+    .button-secondary:hover { background: #f7f9fb; border-color: #bcc7d4; }
+    .button svg { width: 16px; height: 16px; }
+    .demo-note {
+      margin: 13px 3px 0; display: flex; align-items: center; gap: 7px;
+      color: var(--muted); font-size: 12px;
+    }
+    .demo-note svg { width: 15px; height: 15px; color: var(--amber); flex: none; }
+    .status-line {
+      position: fixed; right: 22px; bottom: 78px; z-index: 21; max-width: min(440px, calc(100vw - 32px));
+      margin: 0; padding: 11px 15px; color: var(--brand); background: #fff;
+      border: 1px solid var(--line); border-left: 3px solid var(--brand);
+      border-radius: 9px; box-shadow: var(--shadow); font-size: 13px; font-weight: 650;
+      pointer-events: none;
+    }
+    .status-line.error { color: #b42342; border-left-color: #b42342; }
+    .status-line:empty { display: none; }
+    .loader {
+      display: none; align-items: center; gap: 12px; margin: 16px 0 0; padding: 16px 18px;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    }
+    .loader.visible { display: flex; }
+    .spinner {
+      width: 21px; height: 21px; flex: none; border: 2px solid #E8E2FF;
+      border-top-color: var(--brand); border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    .loader strong { display: block; font-size: 13px; }
+    .loader span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .results { padding: 30px 0 62px; }
+    .results-heading {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 15px;
+    }
+    .results-heading h2 { margin: 0; font-size: 19px; letter-spacing: -.35px; }
+    .demo-chip {
+      padding: 6px 9px; border-radius: 20px; background: var(--brand-soft);
+      color: var(--brand); font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase;
+    }
+    .repo-card, .review-card, .empty-state {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+    }
+    .action-toolbar {
+      position: sticky; top: 10px; z-index: 5; margin-bottom: 12px; padding: 9px;
+      display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;
+      background: rgba(255, 255, 255, .96); border: 1px solid var(--line);
+      border-radius: 11px; box-shadow: 0 8px 24px rgba(27, 39, 54, .08);
+      backdrop-filter: blur(12px);
+    }
+    .action-toolbar .button { min-height: 38px; padding: 0 12px; font-size: 12px; }
+    .action-toolbar .button svg { width: 15px; height: 15px; }
+    .repo-card { padding: 17px 19px; display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+    .repo-icon {
+      width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px;
+      background: #f1f3f6; color: #344256; flex: none;
+    }
+    .repo-icon svg { width: 21px; height: 21px; }
+    .repo-meta { min-width: 0; flex: 1; }
+    .repo-name { overflow: hidden; color: #263345; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .repo-sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .sample-label { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .review-grid { display: grid; grid-template-columns: minmax(0, 1fr) 286px; align-items: start; gap: 15px; }
+    .review-card { padding: 21px 23px; min-width: 0; }
+    .review-main { display: grid; gap: 15px; }
+    .section-card { min-width: 0; }
+    .section-card h3 {
+      display: flex; align-items: center; gap: 9px; margin: 0 0 13px;
+      color: #263345; font-size: 15px; letter-spacing: -.2px;
+    }
+    .section-card h3::before { content: ""; width: 3px; height: 17px; border-radius: 3px; background: var(--brand); }
+    .section-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .section-header h3 { min-width: 0; flex: 1; }
+    .section-toggle {
+      flex: none; padding: 3px 4px; border: 0; background: transparent;
+      color: var(--brand); font-size: 11px; font-weight: 700;
+    }
+    .section-toggle:hover { color: var(--brand-accent); text-decoration: underline; }
+    .markdown-body { color: #475569; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+    .markdown-body > :first-child { margin-top: 0; }
+    .markdown-body > :last-child { margin-bottom: 0; }
+    .markdown-body p { margin: 8px 0; }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+      margin: 17px 0 8px; font-size: 14px; letter-spacing: 0; line-height: 1.4;
+    }
+    .markdown-body ul, .markdown-body ol { margin: 8px 0; padding-left: 21px; }
+    .markdown-body li { margin: 4px 0; padding-left: 2px; }
+    .markdown-body code {
+      padding: 2px 5px; background: #f1f4f8; border-radius: 4px;
+      color: #D01692; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .92em;
+    }
+    .markdown-body pre { overflow-x: auto; margin: 10px 0; padding: 14px; background: #182230; border-radius: 8px; }
+    .markdown-body pre code { padding: 0; background: none; color: #e5edf6; font-size: 12px; }
+    .markdown-body pre code .token-keyword { color: #B49EFF; }
+    .markdown-body pre code .token-string { color: #A8D9A0; }
+    .markdown-body pre code .token-number { color: #F7C77B; }
+    .markdown-body pre code .token-comment { color: #9AA7B7; font-style: italic; }
+    .table-wrap { width: 100%; overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; }
+    .markdown-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .markdown-body th, .markdown-body td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--line); }
+    .markdown-body th { background: #f7f9fb; color: #354256; font-weight: 700; white-space: nowrap; }
+    .markdown-body tr:last-child td { border-bottom: 0; }
+    .score-panel { padding: 18px; text-align: center; background: linear-gradient(155deg, #F6F4FF, #fff 80%); border: 1px solid #E2E7F3; border-radius: 11px; }
+    .score-label { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .score-value { margin: 9px 0 0; color: var(--brand); font-size: 38px; font-weight: 780; letter-spacing: -1.7px; line-height: 1; }
+    .score-value span { color: #8792a0; font-size: 16px; font-weight: 600; letter-spacing: 0; }
+    .score-track { height: 6px; margin-top: 15px; overflow: hidden; background: #E8E2FF; border-radius: 5px; }
+    .score-track span { display: block; height: 100%; width: 100%; background: var(--brand); border-radius: inherit; }
+    .score-caption { margin-top: 9px; color: var(--muted); font-size: 11px; }
+    .side-stack { display: grid; gap: 15px; }
+    .side-stack .review-card { padding: 17px; }
+    .side-stack .section-card h3 { font-size: 13px; }
+    .metric-list { display: grid; gap: 13px; }
+    .metric-row { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 12px; }
+    .metric-row span { color: var(--muted); }
+    .metric-row strong { color: #344256; font-size: 12px; }
+    .empty-state { padding: 44px 22px; text-align: center; color: var(--muted); }
+    .empty-state svg { width: 35px; height: 35px; color: #a5afbc; }
+    .empty-state h3 { margin: 12px 0 5px; color: #344256; font-size: 15px; }
+    .empty-state p { margin: 0; font-size: 13px; }
+    .scroll-to-top {
+      position: fixed; right: 22px; bottom: 22px; z-index: 20; width: 44px; height: 44px;
+      display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%;
+      background: var(--brand); color: #fff; box-shadow: var(--shadow);
+    }
+    .scroll-to-top:hover { background: var(--brand-dark); }
+    .scroll-to-top svg { width: 19px; height: 19px; }
+    footer {
+      min-height: 64px; padding: 18px max(24px, calc((100vw - 1180px) / 2));
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      color: #788598; background: #fff; border-top: 1px solid var(--line); font-size: 11px;
+    }
+    footer strong { color: #4b586a; font-weight: 700; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 780px) {
+      .review-grid { grid-template-columns: 1fr; }
+      .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .input-panel { grid-template-columns: 1fr; }
+      .form-actions { justify-content: flex-start; }
+      .topbar-note { display: none; }
+    }
+    @media (max-width: 540px) {
+      .topbar { height: 64px; padding: 0 19px; }
+      .brand-logo { width: 132px; }
+      main { width: calc(100% - 32px); }
+      .intro { padding: 36px 0 22px; }
+      h1 { font-size: 32px; }
+      .intro p { font-size: 14px; }
+      .input-panel { padding: 16px; gap: 12px; }
+      .form-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .button { padding: 0 12px; }
+      .results { padding-top: 25px; }
+      .results-heading { align-items: flex-start; }
+      .repo-card { padding: 13px; }
+      .sample-label { font-size: 10px; white-space: normal; text-align: right; }
+      .review-card { padding: 17px; }
+      .action-toolbar { top: 6px; justify-content: stretch; }
+      .action-toolbar .button { flex: 1 1 auto; }
+      .side-stack { grid-template-columns: 1fr; }
+      .status-line { right: 16px; bottom: 70px; }
+      .scroll-to-top { right: 15px; bottom: 15px; }
+      footer { padding: 17px 16px; align-items: flex-start; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup" aria-label="Gupshup AI">
+      <img class="brand-logo" src="https://gs-upload.gupshup.io/revamp/assets/v3/images/new-home-page/new-logo-gupshup.svg" alt="Gupshup" width="150" height="25">
+    </div>
+    <div class="topbar-note">AI-powered developer tools</div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> Developer intelligence</div>
+      <h1 id="page-title">AI Code Reviewer</h1>
+      <p>Get a clear, actionable review of your GitHub repository. Explore code quality insights in one focused workspace.</p>
+    </section>
+
+    <form class="input-panel" id="review-form" novalidate>
+      <div>
+        <label class="field-label" for="repository-url">GitHub repository or raw file URL</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 6v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.7a5.2 5.2 0 0 0-1.4-3.6 4.8 4.8 0 0 0-.1-3.6s-1.1-.4-3.7 1.4a12.8 12.8 0 0 0-6.8 0C5.6 1.2 4.5 1.6 4.5 1.6a4.8 4.8 0 0 0-.1 3.6A5.2 5.2 0 0 0 3 8.8c0 5.2 3.1 6.4 6.1 6.7a3.4 3.4 0 0 0-.9 2.6V22"></path>
+          </svg>
+          <input id="repository-url" name="repository-url" type="url" autocomplete="url" placeholder="Enter GitHub repository or raw file URL" aria-describedby="url-error">
+        </div>
+        <p class="input-error" id="url-error" role="alert"></p>
+      </div>
+      <div class="form-actions">
+        <button class="button button-primary" id="analyze-button" type="submit">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m10 2 1.7 5.2L17 9l-5.3 1.8L10 16l-1.8-5.2L3 9l5.2-1.8L10 2Z"></path><path d="m16 13 .9 2.1L19 16l-2.1.9L16 19l-.9-2.1L13 16l2.1-.9L16 13Z"></path></svg>
+          Analyze Code
+        </button>
+        <button class="button button-secondary" id="reset-button" type="button">Reset</button>
+      </div>
+    </form>
+    <p class="demo-note">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.5"></circle><path d="M10 9v4m0-6h.01"></path></svg>
+      Enter a public GitHub repository or raw file URL. The request is sent to the configured n8n review service.
+    </p>
+    <div class="loader" id="loader" role="status" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <div><strong id="loader-title">Analyzing Repository...</strong><span>Fetching Code Review... · Generating Insights...</span></div>
+    </div>
+    <p class="status-line" id="status-message" role="status" aria-live="polite"></p>
+
+    <section class="results" id="results" aria-labelledby="results-title">
+      <div class="results-heading">
+        <h2 id="results-title">Review results</h2>
+        <span class="demo-chip" id="result-badge" hidden>AI-generated review</span>
+      </div>
+      <div class="empty-state" id="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"></path><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10h6"></path></svg>
+        <h3>Your review will appear here</h3>
+        <p>Enter a public GitHub repository or raw file URL to request a review.</p>
+      </div>
+      <div id="review-content" hidden>
+        <div class="action-toolbar" role="toolbar" aria-label="Review actions">
+          <button class="button button-secondary" id="copy-review" type="button" aria-label="Copy review">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="7" y="6" width="10" height="12" rx="1.5"></rect><path d="M13 6V3.5A1.5 1.5 0 0 0 11.5 2h-8A1.5 1.5 0 0 0 2 3.5v10A1.5 1.5 0 0 0 3.5 15H7"></path></svg>
+            Copy Review
+          </button>
+          <button class="button button-secondary" id="download-report" type="button" aria-label="Download review report">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M10 2v10m0 0 3.5-3.5M10 12 6.5 8.5M3 13v3.5A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V13"></path></svg>
+            Download Report
+          </button>
+          <button class="button button-secondary" id="toggle-sections" type="button" aria-controls="main-sections metrics-card" aria-expanded="true">Collapse sections</button>
+          <button class="button button-secondary" id="reset-review" type="button" aria-label="Reset review">Reset Review</button>
+        </div>
+        <div class="repo-card">
+          <div class="repo-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .9a11.1 11.1 0 0 0-3.5 21.6c.6.1.8-.2.8-.5v-2c-3.3.7-4-.8-4-.8-.5-1.4-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.4-1.3-5.4-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.8 5.5-5.4 5.8.4.4.8 1 .8 2.1V22c0 .3.2.6.8.5A11.1 11.1 0 0 0 12 .9Z"></path></svg>
+          </div>
+          <div class="repo-meta">
+            <div class="repo-name" id="repo-name"></div>
+            <div class="repo-sub">Analyzed by the n8n review service</div>
+          </div>
+          <span class="sample-label">Live review</span>
+        </div>
+        <div class="review-grid">
+          <div class="review-card review-main" id="main-sections"></div>
+          <aside class="side-stack" aria-label="Review highlights">
+            <div class="review-card" id="score-card" hidden></div>
+            <div class="review-card" id="metrics-card" hidden></div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <span><strong>gupshup AI</strong> · AI Code Reviewer</span>
+    <span>© <span id="copyright-year"></span> Gupshup · Version 1.0.0</span>
+  </footer>
+  <button class="scroll-to-top" id="scroll-to-top" type="button" aria-label="Scroll to top" title="Scroll to top" hidden>
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 16V4m0 0L5 9m5-5 5 5"></path></svg>
+  </button>
+
+  <script>
+    "use strict";
+    const form = document.getElementById("review-form");
+    const repositoryInput = document.getElementById("repository-url");
+    const errorMessage = document.getElementById("url-error");
+    const analyzeButton = document.getElementById("analyze-button");
+    const resetButton = document.getElementById("reset-button");
+    const loader = document.getElementById("loader");
+    const loaderTitle = document.getElementById("loader-title");
+    const statusMessage = document.getElementById("status-message");
+    const emptyState = document.getElementById("empty-state");
+    const reviewContent = document.getElementById("review-content");
+    const resultBadge = document.getElementById("result-badge");
+    const copyReviewButton = document.getElementById("copy-review");
+    const downloadReportButton = document.getElementById("download-report");
+    const toggleSectionsButton = document.getElementById("toggle-sections");
+    const resetReviewButton = document.getElementById("reset-review");
+    const scrollToTopButton = document.getElementById("scroll-to-top");
+    const webhookUrls = {
+      test: "http://localhost:5678/webhook-test/github_code_review",
+      production: "http://localhost:5678/webhook/github_code_review"
+    };
+    // Set to false only when testing with n8n's temporary test webhook.
+    const useProductionWebhook = true;
+    const reviewWebhookUrl = useProductionWebhook ? webhookUrls.production : webhookUrls.test;
+    const requestTimeoutMs = 120000;
+    let requestInProgress = false;
+    let loadingMessageInterval = null;
+    let codeHighlightObserver = null;
+    let currentReviewMarkdown = "";
+    let currentRepositoryUrl = "";
+
+    function escapeHTML(value) {
+      return value.replace(/[&<>"']/g, function (character) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character];
+      });
+    }
+
+    function inlineMarkdown(value) {
+      let html = escapeHTML(value);
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+      html = html.replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+      return html;
+    }
+
+    function isTableDivider(line) {
+      return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line);
+    }
+
+    function splitTableRow(line) {
+      return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(function (cell) {
+        return cell.trim();
+      });
+    }
+
+    function highlightCode(code) {
+      const tokenPattern = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:async|await|break|case|catch|class|const|continue|default|else|export|extends|false|finally|for|from|function|if|implements|import|interface|let|new|null|package|private|public|return|static|super|switch|this|throw|true|try|var|void|while)\b|\b\d+(?:\.\d+)?\b/g;
+      const output = [];
+      let previousIndex = 0;
+      let match;
+      while ((match = tokenPattern.exec(code)) !== null) {
+        output.push(escapeHTML(code.slice(previousIndex, match.index)));
+        const token = match[0];
+        let tokenType = "keyword";
+        if (/^(?:\/\/|\/\*)/.test(token)) tokenType = "comment";
+        else if (/^["'`]/.test(token)) tokenType = "string";
+        else if (/^\d/.test(token)) tokenType = "number";
+        output.push('<span class="token-' + tokenType + '">' + escapeHTML(token) + "</span>");
+        previousIndex = tokenPattern.lastIndex;
+      }
+      output.push(escapeHTML(code.slice(previousIndex)));
+      return output.join("");
+    }
+
+    function clearCodeHighlightObserver() {
+      if (!codeHighlightObserver) return;
+      codeHighlightObserver.disconnect();
+      codeHighlightObserver = null;
+    }
+
+    function highlightVisibleCode(root) {
+      clearCodeHighlightObserver();
+      const codeBlocks = Array.from(root.querySelectorAll("pre code[data-highlight-pending]"));
+      if (!codeBlocks.length) return;
+
+      function highlight(block) {
+        block.innerHTML = highlightCode(block.textContent);
+        block.removeAttribute("data-highlight-pending");
+      }
+
+      if (!("IntersectionObserver" in window)) {
+        codeBlocks.forEach(highlight);
+        return;
+      }
+
+      codeHighlightObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            highlight(entry.target);
+            codeHighlightObserver.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: "160px" });
+      codeBlocks.forEach(function (block) { codeHighlightObserver.observe(block); });
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+      const output = [];
+      let index = 0;
+      while (index < lines.length) {
+        const line = lines[index];
+        if (!line.trim()) { index += 1; continue; }
+
+        const codeFence = /^```([A-Za-z0-9#+.-]*)\s*$/.exec(line);
+        if (codeFence) {
+          const code = [];
+          index += 1;
+          while (index < lines.length && !/^```/.test(lines[index])) {
+            code.push(lines[index]);
+            index += 1;
+          }
+          if (index < lines.length) index += 1;
+          const language = codeFence[1].toLowerCase();
+          const languageClass = language ? ' class="language-' + language + '"' : "";
+          output.push("<pre><code" + languageClass + " data-highlight-pending>" +
+            escapeHTML(code.join("\n")) + "</code></pre>");
+          continue;
+        }
+
+        const heading = /^(#{1,6})\s+(.+)$/.exec(line);
+        if (heading) {
+          const level = Math.min(heading[1].length + 1, 6);
+          output.push("<h" + level + ">" + inlineMarkdown(heading[2]) + "</h" + level + ">");
+          index += 1;
+          continue;
+        }
+
+        if (index + 1 < lines.length && line.indexOf("|") !== -1 && isTableDivider(lines[index + 1])) {
+          const headers = splitTableRow(line);
+          index += 2;
+          const rows = [];
+          while (index < lines.length && lines[index].trim() && lines[index].indexOf("|") !== -1) {
+            rows.push(splitTableRow(lines[index]));
+            index += 1;
+          }
+          const head = headers.map(function (cell) { return "<th>" + inlineMarkdown(cell) + "</th>"; }).join("");
+          const body = rows.map(function (row) {
+            return "<tr>" + headers.map(function (_, cellIndex) {
+              return "<td>" + inlineMarkdown(row[cellIndex] || "") + "</td>";
+            }).join("") + "</tr>";
+          }).join("");
+          output.push('<div class="table-wrap"><table><thead><tr>' + head + "</tr></thead><tbody>" + body + "</tbody></table></div>");
+          continue;
+        }
+
+        const unordered = /^\s*[-*+]\s+/.test(line);
+        const ordered = /^\s*\d+[.)]\s+/.test(line);
+        if (unordered || ordered) {
+          const listTag = ordered ? "ol" : "ul";
+          const items = [];
+          while (index < lines.length && (ordered ? /^\s*\d+[.)]\s+/.test(lines[index]) : /^\s*[-*+]\s+/.test(lines[index]))) {
+            items.push("<li>" + inlineMarkdown(lines[index].replace(ordered ? /^\s*\d+[.)]\s+/ : /^\s*[-*+]\s+/, "")) + "</li>");
+            index += 1;
+          }
+          output.push("<" + listTag + ">" + items.join("") + "</" + listTag + ">");
+          continue;
+        }
+
+        const paragraph = [line.trim()];
+        index += 1;
+        while (index < lines.length && lines[index].trim() &&
+          !/^(#{1,6})\s+/.test(lines[index]) && !/^```/.test(lines[index]) &&
+          !/^\s*[-*+]\s+/.test(lines[index]) && !/^\s*\d+[.)]\s+/.test(lines[index])) {
+          paragraph.push(lines[index].trim());
+          index += 1;
+        }
+        output.push("<p>" + inlineMarkdown(paragraph.join(" ")) + "</p>");
+      }
+      return output.join("");
+    }
+
+    function splitReviewSections(markdown) {
+      const sections = [];
+      let current = null;
+      let insideCodeBlock = false;
+      markdown.replace(/\r\n?/g, "\n").split("\n").forEach(function (line) {
+        if (/^```/.test(line)) insideCodeBlock = !insideCodeBlock;
+        const heading = /^#{1,6}\s+(.+)$/.exec(line);
+        if (heading && !insideCodeBlock) {
+          current = { title: heading[1].trim(), content: [] };
+          sections.push(current);
+        } else if (current) {
+          current.content.push(line);
+        } else if (line.trim()) {
+          current = { title: "Review", content: [line] };
+          sections.push(current);
+        }
+      });
+      return sections.map(function (section) {
+        return { title: section.title, content: section.content.join("\n").trim() };
+      });
+    }
+
+    function parseOverallScore(markdown) {
+      const normalized = markdown.replace(/[\u00a0\u202f]/g, " ");
+      const match = /overall\s+score\b[\s\S]{0,60}?(\d{1,3}(?:\.\d+)?)(?:\s*(?:\/|out\s+of)\s*(\d{1,3}(?:\.\d+)?))?/i.exec(normalized);
+      if (!match) return null;
+      return {
+        value: match[1],
+        maximum: match[2] || null
+      };
+    }
+
+    function updateToggleSectionsButton() {
+      const bodies = Array.from(reviewContent.querySelectorAll(".review-section .markdown-body"));
+      const allExpanded = bodies.length > 0 && bodies.every(function (body) { return !body.hidden; });
+      toggleSectionsButton.disabled = bodies.length === 0;
+      toggleSectionsButton.textContent = allExpanded ? "Collapse sections" : "Expand sections";
+      toggleSectionsButton.setAttribute("aria-expanded", String(allExpanded));
+    }
+
+    function createReviewSection(titleText, bodyHtml, sectionId) {
+      const article = document.createElement("section");
+      article.className = "section-card review-section";
+      const header = document.createElement("div");
+      header.className = "section-header";
+      const title = document.createElement("h3");
+      title.innerHTML = inlineMarkdown(titleText);
+      const body = document.createElement("div");
+      body.id = "review-section-body-" + sectionId;
+      body.className = "markdown-body";
+      body.innerHTML = bodyHtml;
+      const toggle = document.createElement("button");
+      toggle.className = "section-toggle";
+      toggle.type = "button";
+      toggle.textContent = "Collapse";
+      toggle.setAttribute("aria-controls", body.id);
+      toggle.setAttribute("aria-expanded", "true");
+      toggle.setAttribute("aria-label", "Collapse " + titleText);
+      toggle.addEventListener("click", function () {
+        const expanded = toggle.getAttribute("aria-expanded") === "true";
+        body.hidden = expanded;
+        toggle.setAttribute("aria-expanded", String(!expanded));
+        toggle.textContent = expanded ? "Expand" : "Collapse";
+        toggle.setAttribute("aria-label", (expanded ? "Expand " : "Collapse ") + titleText);
+        updateToggleSectionsButton();
+      });
+      header.append(title, toggle);
+      article.append(header, body);
+      return article;
+    }
+
+    function renderReview(markdown, repoUrl) {
+      currentReviewMarkdown = markdown;
+      currentRepositoryUrl = repoUrl;
+      const sections = splitReviewSections(markdown);
+      const mainContainer = document.getElementById("main-sections");
+      const scoreCard = document.getElementById("score-card");
+      const metricsCard = document.getElementById("metrics-card");
+      const mainSections = [];
+      let sectionId = 0;
+      let scoreMatch = null;
+      let metricsSection = null;
+
+      sections.forEach(function (section) {
+        if (/overall\s+score/i.test(section.title)) {
+          scoreMatch = parseOverallScore(section.title + "\n" + section.content);
+          mainSections.push(section);
+          return;
+        }
+        if (/review\s+metrics/i.test(section.title)) {
+          metricsSection = section;
+          return;
+        }
+        mainSections.push(section);
+      });
+      if (!scoreMatch) scoreMatch = parseOverallScore(markdown);
+
+      mainContainer.replaceChildren();
+      mainSections.forEach(function (section) {
+        mainContainer.appendChild(createReviewSection(
+          section.title,
+          renderMarkdown(section.content),
+          sectionId
+        ));
+        sectionId += 1;
+      });
+
+      scoreCard.hidden = !scoreMatch;
+      scoreCard.replaceChildren();
+      if (scoreMatch) {
+        const scoreSection = document.createElement("section");
+        scoreSection.className = "section-card score-panel";
+        const label = document.createElement("div");
+        label.className = "score-label";
+        label.textContent = "Overall score";
+        const value = document.createElement("div");
+        value.className = "score-value";
+        value.append(document.createTextNode(scoreMatch.value));
+        if (scoreMatch.maximum) {
+          value.append(document.createTextNode(" "));
+          const denominator = document.createElement("span");
+          denominator.textContent = "/ " + scoreMatch.maximum;
+          value.appendChild(denominator);
+        }
+        const caption = document.createElement("div");
+        caption.className = "score-caption";
+        caption.textContent = "As stated in the review";
+        scoreSection.append(label, value);
+        if (scoreMatch.maximum && Number(scoreMatch.maximum) > 0) {
+          const track = document.createElement("div");
+          track.className = "score-track";
+          const fill = document.createElement("span");
+          const percentage = Math.max(0, Math.min(100,
+            Number(scoreMatch.value) / Number(scoreMatch.maximum) * 100));
+          fill.style.width = percentage + "%";
+          track.appendChild(fill);
+          scoreSection.appendChild(track);
+        }
+        scoreSection.appendChild(caption);
+        scoreCard.appendChild(scoreSection);
+      }
+
+      metricsCard.hidden = !metricsSection;
+      metricsCard.replaceChildren();
+      if (metricsSection) {
+        metricsCard.appendChild(createReviewSection(
+          metricsSection.title,
+          renderMarkdown(metricsSection.content),
+          sectionId
+        ));
+        sectionId += 1;
+      }
+
+      const parsed = new URL(repoUrl);
+      document.getElementById("repo-name").textContent = parsed.pathname.split("/").filter(Boolean).slice(0, 2).join("/");
+      highlightVisibleCode(reviewContent);
+      updateToggleSectionsButton();
+      emptyState.hidden = true;
+      reviewContent.hidden = false;
+      resultBadge.hidden = false;
+    }
+
+    function getReviewUrl(value) {
+      const enteredUrl = value.trim();
+      if (!enteredUrl) return { message: "GitHub repository or raw file URL is required." };
+      try {
+        const parsed = new URL(enteredUrl);
+        const pathParts = parsed.pathname.split("/").filter(Boolean);
+        const validOwnerAndRepository = pathParts.length >= 2 &&
+          /^[A-Za-z0-9_.-]+$/.test(pathParts[0]) &&
+          /^[A-Za-z0-9_.-]+$/.test(pathParts[1]);
+        const isRepositoryUrl = parsed.hostname === "github.com" && validOwnerAndRepository;
+        const isRawFileUrl = parsed.hostname === "raw.githubusercontent.com" &&
+          pathParts.length >= 4 && validOwnerAndRepository;
+        if (parsed.protocol !== "https:" || parsed.username || parsed.password ||
+          (!isRepositoryUrl && !isRawFileUrl)) {
+          return { message: "Enter a valid public GitHub repository or raw file URL." };
+        }
+        return { url: enteredUrl };
+      } catch {
+        return { message: "Enter a valid public GitHub repository or raw file URL." };
+      }
+    }
+
+    function setError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.toggle("visible", Boolean(message));
+      repositoryInput.setAttribute("aria-invalid", message ? "true" : "false");
+    }
+
+    function setStatus(message, isError) {
+      statusMessage.textContent = message;
+      statusMessage.classList.toggle("error", Boolean(isError));
+    }
+
+    async function requestReview(url) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(function () {
+        controller.abort();
+      }, requestTimeoutMs);
+
+      try {
+        const response = await fetch(reviewWebhookUrl, {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ url: url }),
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error("Review webhook returned 404. Confirm the n8n test workflow is listening and the webhook URL is correct.");
+          }
+          if (response.status >= 400 && response.status < 500) {
+            throw new Error("Repository could not be analyzed. Check the URL and confirm it is publicly accessible.");
+          }
+          throw new Error("Review generation failed. Please try again.");
+        }
+
+        let payload;
+        try {
+          payload = await response.json();
+        } catch {
+          throw new Error("Invalid response received from server.");
+        }
+        if (!payload || typeof payload !== "object" || typeof payload.review !== "string") {
+          throw new Error("Invalid response received from server.");
+        }
+        if (!payload.review.trim()) {
+          throw new Error("The review service returned an empty review.");
+        }
+        return payload.review;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          throw new Error("The review request timed out. Please try again.");
+        }
+        if (error.name === "TypeError") {
+          throw new Error("Unable to reach review service. Check the webhook URL, service availability, and CORS settings.");
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    function copyWithDocumentCommand(text) {
+      if (typeof document.execCommand !== "function") {
+        throw new Error("Copy is not supported by this browser.");
+      }
+      const temporaryInput = document.createElement("textarea");
+      temporaryInput.value = text;
+      temporaryInput.setAttribute("readonly", "");
+      temporaryInput.style.position = "fixed";
+      temporaryInput.style.opacity = "0";
+      document.body.appendChild(temporaryInput);
+      temporaryInput.select();
+      const copied = document.execCommand("copy");
+      temporaryInput.remove();
+      if (!copied) throw new Error("The browser could not copy the review.");
+    }
+
+    async function copyReview() {
+      if (!currentReviewMarkdown) {
+        setStatus("No review is available to copy.", true);
+        return;
+      }
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(currentReviewMarkdown);
+        } else {
+          copyWithDocumentCommand(currentReviewMarkdown);
+        }
+        setStatus("Review Copied Successfully.", false);
+      } catch {
+        setStatus("Unable to copy the review. Please try again or copy it manually.", true);
+      }
+    }
+
+    function downloadReport() {
+      if (!currentReviewMarkdown) {
+        setStatus("No review is available to download.", true);
+        return;
+      }
+      try {
+        const pathParts = new URL(currentRepositoryUrl).pathname.split("/").filter(Boolean);
+        const repositoryName = pathParts.slice(0, 2).join("-")
+          .replace(/[^A-Za-z0-9._-]+/g, "-") || "repository";
+        const report = new Blob([currentReviewMarkdown], { type: "text/markdown;charset=utf-8" });
+        const reportUrl = URL.createObjectURL(report);
+        const link = document.createElement("a");
+        link.href = reportUrl;
+        link.download = repositoryName + "-review.md";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(function () { URL.revokeObjectURL(reportUrl); }, 0);
+        setStatus("Report Downloaded Successfully.", false);
+      } catch {
+        setStatus("Unable to download the report. Please try again.", true);
+      }
+    }
+
+    function resetReview() {
+      if (requestInProgress) return;
+      clearCodeHighlightObserver();
+      repositoryInput.value = "";
+      currentReviewMarkdown = "";
+      currentRepositoryUrl = "";
+      setError("");
+      loader.classList.remove("visible");
+      loaderTitle.textContent = "Analyzing Repository...";
+      analyzeButton.disabled = false;
+      if (loadingMessageInterval !== null) {
+        window.clearInterval(loadingMessageInterval);
+        loadingMessageInterval = null;
+      }
+      setStatus("", false);
+      reviewContent.hidden = true;
+      emptyState.hidden = false;
+      resultBadge.hidden = true;
+      repositoryInput.focus();
+    }
+
+    copyReviewButton.addEventListener("click", copyReview);
+    downloadReportButton.addEventListener("click", downloadReport);
+    resetReviewButton.addEventListener("click", resetReview);
+    resetButton.addEventListener("click", resetReview);
+    toggleSectionsButton.addEventListener("click", function () {
+      const bodies = Array.from(reviewContent.querySelectorAll(".review-section .markdown-body"));
+      const shouldExpand = bodies.some(function (body) { return body.hidden; });
+      bodies.forEach(function (body) {
+        body.hidden = !shouldExpand;
+        const toggle = body.parentElement.querySelector(".section-toggle");
+        const title = body.parentElement.querySelector("h3").textContent;
+        toggle.setAttribute("aria-expanded", String(shouldExpand));
+        toggle.textContent = shouldExpand ? "Collapse" : "Expand";
+        toggle.setAttribute("aria-label", (shouldExpand ? "Collapse " : "Expand ") + title);
+      });
+      updateToggleSectionsButton();
+    });
+
+    scrollToTopButton.addEventListener("click", function () {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    });
+    window.addEventListener("scroll", function () {
+      scrollToTopButton.hidden = window.scrollY < 320;
+    }, { passive: true });
+    document.getElementById("copyright-year").textContent = String(new Date().getFullYear());
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      if (requestInProgress) return;
+      const result = getReviewUrl(repositoryInput.value);
+      if (!result.url) {
+        setError(result.message);
+        repositoryInput.focus();
+        return;
+      }
+      setError("");
+      setStatus("", false);
+      requestInProgress = true;
+      clearCodeHighlightObserver();
+      currentReviewMarkdown = "";
+      currentRepositoryUrl = "";
+      analyzeButton.disabled = true;
+      resetButton.disabled = true;
+      loader.classList.add("visible");
+      reviewContent.hidden = true;
+      emptyState.hidden = false;
+      resultBadge.hidden = true;
+      loaderTitle.textContent = "Analyzing Repository...";
+      const loadingMessages = ["Fetching Code Review...", "Generating Insights..."];
+      let loadingMessageIndex = 0;
+      loadingMessageInterval = window.setInterval(function () {
+        loaderTitle.textContent = loadingMessages[loadingMessageIndex % loadingMessages.length];
+        loadingMessageIndex += 1;
+      }, 1200);
+
+      try {
+        const review = await requestReview(result.url);
+        renderReview(review, result.url);
+        setStatus("Code Review Generated Successfully.", false);
+      } catch (error) {
+        setStatus(error.message || "Review generation failed. Please try again.", true);
+      } finally {
+        window.clearInterval(loadingMessageInterval);
+        loadingMessageInterval = null;
+        loader.classList.remove("visible");
+        requestInProgress = false;
+        analyzeButton.disabled = false;
+        resetButton.disabled = false;
+      }
+    });
+
+    repositoryInput.addEventListener("input", function () {
+      if (errorMessage.classList.contains("visible")) setError("");
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+{
+  "name": "Custom Ui for GitHub code review(single page) Week 2(Day 2)-Month2",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/testleaftrainings/Sel_May_2026/main/Week5/Day2/LearnDragAndDrop.java",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -352,
+        -80
+      ],
+      "id": "8143e0b8-6ea9-410c-a5fa-93a62a1bb193",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=For this given Input java code :{{ $json.data }} follow these;\n\nInstructions:\n\nYou are an expert Software Code Reviewer specialized in Java enterprise development and test automation frameworks.\nYour task is to analyze and review the uploaded Java code based on specific quality parameters and provide:\n\nIndividual parameter scores (each out of 20)\n\nOverall code quality score (out of 100)\n\nActionable feedback and recommendations for improvement\n\nEvaluate the Java code against the following five parameters:\n\nCode Readability: Are naming conventions, indentation, and structure clear and consistent?\n\nCode Efficiency: Does the code avoid unnecessary loops, redundant logic, and optimize performance?\n\nError Handling: Does the code handle exceptions gracefully with meaningful messages and proper use of try-catch/finally or logging?\n\nMaintainability: Is the code modular, reusable, and easily extendable for future changes?\n\nBest Practices & Standards: Does the code follow Java best practices (SOLID, DRY, proper imports, dependency management, etc.)?\n\nFinally, generate an overall rating with improvement areas and a short summary.\n\nC – Context\n\nThe input Java code belongs to a production-grade software project (could be backend automation, web app, or API service).\nAssume that this code will be part of a shared repository reviewed by multiple developers, so it must comply with clean code, maintainability, and security standards.\nYou are reviewing this code as part of a formal pull request (PR) process.\n\n\nExample Output (Review Summary):\n\nParameter\tDescription\tScore (out of 20)\nCode Readability\tNaming is clear but lacks comments or documentation.\t16\nCode Efficiency\tSimple arithmetic; no inefficiencies observed.\t18\nError Handling\tMissing division-by-zero handling.\t10\nMaintainability\tClass is minimal; not modularized for future extensions.\t14\nBest Practices & Standards\tLacks input validation and unit tests.\t13\n\nOverall Score: 71 / 100\n\nImprovement Areas:\n\nAdd input validation for division-by-zero errors.\n\nInclude JavaDoc comments for public methods.\n\nImplement basic unit tests to validate functionality.\n\nSummary:\nThe code functions correctly but lacks robustness and documentation. Minor improvements can enhance production readiness.\n\nP – Persona\n\nYou are a senior Java architect and code reviewer with 10+ years of experience in enterprise application design, CI/CD integration, and automation frameworks (Spring Boot, Selenium, Playwright, TestNG).\nYou are known for balancing code quality with real-world performance and maintainability.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -128,
+        -80
+      ],
+      "id": "c0e0b0e3-840e-43f6-b771-942c573cd088",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        128
+      ],
+      "id": "8a18221c-0ab6-422d-a690-8df88fb66d5e",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "v6Sz3b5nm4i1Vv01",
+          "name": "testcase_generate"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github_code_review",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -608,
+        -80
+      ],
+      "id": "e9c2e977-ab25-49db-b7bb-a02b0d9ac69d",
+      "name": "Webhook",
+      "webhookId": "82b165de-cf85-4526-ae6a-7aee05d8eda8"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"review\": $json.text } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        -80
+      ],
+      "id": "93838497-44f9-49be-8742-6b99099a8e68",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "712a5c32-37a2-4e41-9f08-f901cc90f915",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c0dc17ce9efcf8fd0877e6ff15010fc2d2717dd4b60722ba4a9f11f93bab1bed"
+  },
+  "nodeGroups": [],
+  "id": "4gAH4E2aJLLoBb11",
+  "tags": []
+}
